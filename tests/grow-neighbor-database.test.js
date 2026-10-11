@@ -49,7 +49,7 @@ test('database-backed recommendations link to eligible events, persist registrat
     const now = Date.parse('2026-10-10T12:30:00Z')
     let chosen
     let candidates
-    const handler = createApiHandler({ pool, verifyUser: async token => users[token], now: () => now, recommend: async request => {
+    const handler = createApiHandler({ pool, geocode: async () => null, verifyUser: async token => users[token], now: () => now, recommend: async request => {
       candidates = request.events
       assert.equal(request.city, 'Durham')
       return { answer: 'A cleanup is a good first step.', eventIds: [chosen, chosen], model: 'sdk-fixture', recommendations: [{ title: 'Forged title', id: randomUUID() }] }
@@ -114,7 +114,7 @@ test('shared database limits are atomic across handlers and failed Gemini attemp
       if (providerCalls === 1) throw new ApiError(503, 'Gemini is unavailable.', 'ai_unavailable')
       return { answer: 'Try reducing household waste while looking for a local event.', eventIds: [], model: 'sdk-fixture' }
     }
-    const handlers = [createApiHandler({ pool, now: () => now, verifyUser: async () => user, recommend }), createApiHandler({ pool, now: () => now, verifyUser: async () => user, recommend })]
+    const handlers = [createApiHandler({ pool, geocode: async () => null, now: () => now, verifyUser: async () => user, recommend }), createApiHandler({ pool, now: () => now, verifyUser: async () => user, recommend })]
     const results = await Promise.all(Array.from({ length: 8 }, (_, index) => invoke(handlers[index % 2], { token: 'neighbor' })))
     assert.equal(results.filter(result => result.status === 429).length, 3)
     assert.equal(results.filter(result => result.status === 503).length, 1)
@@ -134,7 +134,7 @@ test('events that become unavailable during Gemini generation are removed from t
   await isolatedDatabase(async pool => {
     const user = { id: randomUUID() }
     let eventId
-    const handler = createApiHandler({ pool, now: () => Date.parse('2026-10-10T12:30:00Z'), verifyUser: async () => user, recommend: async () => {
+    const handler = createApiHandler({ pool, geocode: async () => null, now: () => Date.parse('2026-10-10T12:30:00Z'), verifyUser: async () => user, recommend: async () => {
       await pool.query("UPDATE events SET status='canceled' WHERE id=$1", [eventId])
       return { answer: 'Check availability before joining.', eventIds: [eventId], model: 'sdk-fixture' }
     } })

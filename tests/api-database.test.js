@@ -26,7 +26,7 @@ test('real PostgreSQL: health requires the assistant migration before reporting 
   await admin.query(`CREATE SCHEMA ${schema}`)
   const pool = new pg.Pool({ ...databaseOptions(testUrl), options: `-c search_path=${schema},public` })
   const migrationsDirectory = await mkdtemp(join(tmpdir(), 'rooted-health-migrations-'))
-  const handler = createApiHandler({ pool, authConfigured: true })
+  const handler = createApiHandler({ pool, geocode: async () => null, authConfigured: true })
   try {
     // Copy the unchanged historical migration; the application's real database
     // and migration files are never modified by this isolated readiness check.
@@ -59,7 +59,7 @@ test('real PostgreSQL: profiles, authorization, event capacity and verified-only
     alice: { id: randomUUID(), email: 'alice@example.com' },
     bob: { id: randomUUID(), email: 'bob@example.com' },
   }
-  const handler = createApiHandler({ pool, authConfigured: true, now: () => Date.parse('2026-10-10T12:00:00Z'), verifyUser: async (token) => users[token] })
+  const handler = createApiHandler({ pool, geocode: async () => null, authConfigured: true, now: () => Date.parse('2026-10-10T12:00:00Z'), verifyUser: async (token) => users[token] })
   const call = (token, method, path, body) => invoke(handler, { token, method, path, body })
   try {
     await runMigrations(pool)

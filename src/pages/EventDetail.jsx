@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, Clock3, MapPin, Users, Check, ArrowUpRight, Sprout, Info } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock3, MapPin, Users, Check, ArrowUpRight, Sprout, Info, Navigation } from 'lucide-react';
 import { categoryLabel } from '../data/events.js';
+import { directionsUrl, mapPoint, openInMapsUrl } from '../lib/maps.js';
+const EventMap = lazy(() => import('../components/EventMap.jsx'));
 import { useEvents } from '../hooks/useEvents.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { apiRequest } from '../lib/api.js';
@@ -60,6 +62,11 @@ export default function EventDetail() {
         <div><dt><MapPin size={21} aria-hidden="true" />Meeting place</dt><dd>{event.location}<small>{event.address}</small></dd></div>
         <div><dt><Users size={21} aria-hidden="true" />{isSample ? 'Sample participation' : 'Neighbors going'}</dt><dd>{event.participants}{event.capacity === null ? ' registered · no participant limit' : ' of ' + event.capacity + ' places' + (isSample ? ' shown' : '')}</dd></div>
       </dl>
+      <div className="event-map-section">
+        {mapPoint(event) && <Suspense fallback={<div className="event-map event-map-loading" role="status">Loading map…</div>}><EventMap latitude={mapPoint(event)[0]} longitude={mapPoint(event)[1]} label={event.location} /></Suspense>}
+        {isSample && <p className="event-map-note">Sample event: the pin shows the center of {event.city}, not a real meeting place.</p>}
+        <div className="event-map-links"><a className="button button-outline" href={openInMapsUrl(event)} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" />Open in Maps</a><a className="button button-outline" href={directionsUrl(event)} target="_blank" rel="noopener noreferrer"><Navigation size={16} aria-hidden="true" />Get directions</a></div>
+      </div>
       {isSample ? <div className="registration-note"><Info size={18} aria-hidden="true" /><div><strong>Sample preview — registration unavailable</strong><p>This event is fictional. Explore the details; choose a live event to join your neighbors.</p></div></div> : <div className="live-registration">
         {closed && <p className="registration-explanation">Registration is closed for this event.</p>}
         {full && !event.isRegistered && !closed && <p className="registration-explanation">This event is full. Explore another opportunity.</p>}

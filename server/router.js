@@ -4,6 +4,7 @@ import { ensureProfile, readAccessToken, uuidPattern, verifyAccessToken } from '
 import { ApiError, publicError } from './errors.js'
 import { validateEvent, validateProfile } from './validation.js'
 import { getGeminiConfiguration, recommendEvents, validateRecommendations } from './gemini.js'
+import { geocodeAddress } from './geocode.js'
 import { validateAssistantQuestion, reserveAssistantRequest, recordAssistantActivity, readAssistantActivity } from './grow-neighbor.js'
 
 const eventSelect = `SELECT e.*, p.display_name AS organizer_name, c.name AS community_name,
@@ -17,6 +18,7 @@ function eventDto(row) {
     id: row.id, title: row.title, description: row.description, category: row.category,
     startsAt: new Date(row.starts_at).toISOString(), endsAt: new Date(row.ends_at).toISOString(),
     city: row.city, location: row.location, address: row.address,
+    latitude: row.latitude ?? null, longitude: row.longitude ?? null,
     organizer: row.organizer_name, organizerId: row.organizer_id, organizerDescription: row.organizer_description,
     participants: Number(row.participants), capacity: row.capacity,
     image: row.image, imageAlt: row.image_alt, instructions: row.instructions, highlights: row.highlights,
@@ -99,6 +101,13 @@ export function createApiHandler(options = {}) {
   const poolProvider = options.pool ? () => options.pool : options.getPool ?? getPool
   const verify = options.verifyUser ?? verifyAccessToken
   const clock = options.now ?? Date.now
+  const geocode = options.geocode ?? geocodeAddress
+  // The meeting address is tried first, then the named meeting place.
+  const locate = async ({ address, location, city }) => {
+    const found = address ? await geocode({ address, city }) : null
+    const point = found ?? (location ? await geocode({ address: location, city }) : null)
+    return { latitude: point?.latitude ?? null, longitude: point?.longitude ?? null }
+  }
   const authentication = async (request, required = true) => {
     const token = readAccessToken(request, required)
     if (!token) return null
@@ -224,6 +233,7 @@ export function createApiHandler(options = {}) {
         const fields = validateEvent(await readBody(request), { now: clock() })
         const pool = poolProvider()
         await ensureProfile(pool, user)
+        Object.assign(fields, await locate({ address: fields.address, location: fields.location, city: fields.city }))
         const entries = Object.entries(fields)
         const { rows } = await pool.query(`INSERT INTO events (organizer_id, ${entries.map(([name]) => name).join(', ')})
           VALUES ($1, ${entries.map((_, index) => `$${index + 2}`).join(', ')}) RETURNING id`, [user.id, ...entries.map(([, value]) => value)])
@@ -248,6 +258,11 @@ export function createApiHandler(options = {}) {
           if (fields.capacity != null) {
             const { rows: counts } = await client.query("SELECT count(*)::integer AS total FROM event_registrations WHERE event_id = $1 AND status = 'registered'", [id])
             if (fields.capacity < counts[0].total) throw new ApiError(409, 'Capacity cannot be lower than the current registration count.', 'capacity_below_registrations')
+          }
+          if (['address', 'location', 'city'].some((name) => name in fields)) {
+            Object.assign(fields, await locate({
+              address: fields.address ?? existing.address, location: fields.location ?? existing.location, city: fields.city ?? existing.city,
+            }))
           }
           const entries = Object.entries(fields)
           await client.query(`UPDATE events SET ${entries.map(([name], index) => `${name} = $${index + 2}`).join(', ')}, updated_at = now() WHERE id = $1`, [id, ...entries.map(([, value]) => value)])

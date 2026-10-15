@@ -56,6 +56,8 @@ If sign-in succeeds but protected pages report unavailable account services, run
 
 For the complete Gemini → Tiger Data → registration demo, follow [the demo setup and recording guide](docs/demo.md). Add the server-only Gemini key securely, apply the additive migration, run `npm run db:timescale`, and verify the provider with `npm run check:gemini`. No database reset is needed.
 
+Event pages show a free OpenStreetMap map (Leaflet) with "Open in Maps" and "Get directions" links; no map API key is needed. When an event is created or its location changes, the server looks up its coordinates once with OpenStreetMap's Nominatim service and stores them (migration `003_event_coordinates.sql`; run `npm run db:migrate`). If the lookup fails the event is still saved, with links only. Set `GEOCODING_DISABLED=1` to turn lookups off. Sample events show a map pinned to the town center, labeled as not a real meeting place.
+
 For production, follow [the Vercel deployment guide](docs/deploy.md). The existing project is `rooted11/rooted`, with the production alias `rooted-rosy.vercel.app`, connected to this repository's `main` branch. Configure production variables before deploying the new assistant; local environment files are ignored by Git.
 
 To exercise Vercel Functions and its development router together, run `npx vercel dev` from the repository root after linking your Vercel project. The CLI normally serves the app on port 3000. Keep your existing local environment configuration; this command does not require resetting migrations. Add that origin's `/auth/callback` and `/reset-password` URLs to Supabase's allowed redirects when testing account email flows there.

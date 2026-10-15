@@ -173,6 +173,14 @@ main:focus { outline: none; }
 .event-summary { align-self: start; border: 1px solid #d9e0d0; border-radius: 10px; padding: 27px 25px 20px; background: #fffef9; }
 .event-summary h2 { font-size: 26px; margin-bottom: 23px; }
 .event-summary dl { margin: 0; }
+.event-map-section { margin: 4px 0 22px; }
+.event-map { height: 220px; border-radius: 10px; border: 1px solid #d9e0d0; margin-bottom: 12px; z-index: 0; }
+.event-map-loading { display: grid; place-items: center; font-size: 12px; color: #596553; background: #edf1e6; }
+.event-map-pin { background: none; border: 0; }
+.event-map-pin span { display: block; width: 22px; height: 22px; margin: 0 3px; background: #3f5a33; border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.event-map-links { display: grid; gap: 8px; }
+.event-map-note { font-size: 10px; color: #596553; margin: 0 0 10px; }
+.event-map-links .button { width: 100%; justify-content: center; gap: 8px; }
 .event-summary dl > div { position: relative; padding-left: 34px; margin: 22px 0; }
 .event-summary dt > svg { position: absolute; left: 0; top: 3px; color: #566548; }
 .event-summary dt { font-size: 10px; color: #5b6552; margin-bottom: 6px; }
